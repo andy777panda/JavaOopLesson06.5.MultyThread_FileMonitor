@@ -43,49 +43,49 @@ public class FileWatcher implements Runnable {
 
 		StringBuilder sb = new StringBuilder();
 		File[] fileArrayNew = this.mainFolder.listFiles();
-		boolean isFile;
-		int qF = 0; // змінна рахує кількість незмінених файлів/папок
+		MyResult compare;
 
 		// цикл проходу по старому переліку вмісту папки
-		for (File file : this.fileArray) {
-			isFile = false;
-			for (File fileNew : fileArrayNew)
-				// кожен з нових фалів/папок порівнюється зі старим
-				if (file.equals(fileNew)) {
-					isFile = true;
-					break;
-				}
-			if (!isFile) // якщо старий файл/папку не знайдено в новому переліку, то його видалили
-				sb.append(System.getProperty("line.separator")).append("remove: \t" + file.getName());
-			else
-				// якщо старий файл/папку знайдено в новому переліку, то лічильник незмінених збільшується
-				qF++;
-		}
+		compare = compareFolder("remove", this.fileArray, fileArrayNew, sb, 0);
 
 		// цикл проходу по новому переліку вмісту папки
-		for (File fileNew : fileArrayNew) {
-			isFile = false;
-			for (File file : this.fileArray)
-				// кожен зі старих фалів/папок порівнюється з новим
-				if (fileNew.equals(file)) {
-					isFile = true;
-					break;
-				}
-			if (!isFile) // якщо новий файл/папку не знайдено в старому переліку, то його додали
-				sb.append(System.getProperty("line.separator")).append(
-						(fileNew.isFile() ? "add file: \t" : "add folder: \t") + fileNew.getName() + "\t"
-								+ fileNew.length());
-			else
-				// якщо новий файл/папку знайдено в старому переліку, то лічильник незмінених збільшується
-				qF++;
-		}
+		compare = compareFolder("add", fileArrayNew, this.fileArray, compare.getSb1(), compare.getInt1());
+
 
 		// якщо кількість нзмінених == кількості елементів старого та нового переліку -- то змін не було
-		if (qF == (this.fileArray.length + fileArrayNew.length))
+		if (compare.getInt1() == (this.fileArray.length + fileArrayNew.length))
 			sb.append(" -- NO changes in folder");
+		else
+			sb = compare.getSb1();			
 
 		setFileArray(fileArrayNew);
 		return sb.toString();
+	}
+
+	// метод порівняння вмісту папок
+	private MyResult compareFolder(String oper, File[] fileArray1, File[] fileArray2, StringBuilder sb, int qF) {
+		for (File file1 : fileArray1) {
+			boolean isFile = false;
+			for (File file2 : fileArray2)
+				// кожен з нових фалів/папок порівнюється зі старим
+				if (file1.equals(file2)) {
+					isFile = true;
+					break;
+				}
+			if (!isFile) {
+				if (oper.equals("remove"))
+					// якщо старий файл/папку не знайдено в новому переліку, то його видалили
+					sb.append(System.getProperty("line.separator")).append("remove: \t" + file1.getName());
+				if (oper.equals("add"))
+					// якщо новий файл/папку не знайдено в старому переліку, то його додали
+					sb.append(System.getProperty("line.separator")).append(
+							(file1.isFile() ? "add file: \t" : "add folder: \t") + file1.getName() + "\t"
+									+ file1.length());
+			} else
+				// якщо старий/новий файл/папку знайдено в новому/старому переліку, то лічильник незмінених збільшується
+				qF++;
+		}
+		return new MyResult(sb, qF);
 	}
 
 	@Override
